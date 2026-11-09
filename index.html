@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TCC - Visualizador de Estructuras de Datos</title>
+  <title>CIPA 11 - Visualizador de Estructuras de Datos</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React & ReactDOM -->
@@ -13,17 +13,22 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Canvas Confetti para celebración -->
+  <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600;700&display=swap');
+    
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #070913;
+      background-color: #050711;
+      color: #f8fafc;
+      overflow-x: hidden;
     }
+
     code, .font-mono {
       font-family: 'Fira Code', monospace;
     }
+
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -38,11 +43,13 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
       background: #00f2fe;
     }
+    
+    /* PALETA CYBERPUNK FINTECH & GLASSMORPHISM */
     .glass-panel {
       background: rgba(13, 18, 36, 0.75);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(0, 242, 254, 0.12);
+      border: 1px solid rgba(0, 242, 254, 0.15);
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
     }
     .glass-panel-glow {
@@ -68,14 +75,16 @@
     .scanline-grid {
       background-size: 50px 50px;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(243, 85, 218, 0.15), transparent 70%),
-        radial-gradient(circle at 0% 100%, rgba(0, 242, 254, 0.12), transparent 60%),
+        radial-gradient(circle at 50% 0%, rgba(243, 85, 218, 0.12), transparent 70%),
+        radial-gradient(circle at 0% 100%, rgba(0, 242, 254, 0.1), transparent 60%),
         linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
     }
     .bar-sort {
       transition: height 0.3s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
     }
+    
+    /* ANIMACIONES AVATARES */
     .avatar-float {
       animation: floatAvatar 3s ease-in-out infinite;
     }
@@ -98,23 +107,67 @@
       0% { opacity: 0; transform: translateY(20px) scale(0.99); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
+    
     .neon-gradient-text {
       background: linear-gradient(135deg, #00f2fe 0%, #4facfe 35%, #f355da 70%, #ff5858 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+
     @keyframes flashSweep {
       0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
       50% { opacity: 1; }
       100% { transform: translateX(100%) skewX(-12deg); opacity: 0; }
     }
+
+    /* ANIMACIÓN BORDES NEÓN GIRATORIOS (SNAKE BORDER BEAM) */
+    .animated-border-card {
+      position: relative;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      padding: 1px;
+    }
+    .animated-border-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: conic-gradient(
+        transparent 0deg,
+        transparent 280deg,
+        #00f2fe 320deg,
+        #f355da 360deg
+      );
+      animation: rotateBorder 4s linear infinite;
+      z-index: 0;
+    }
+    .animated-border-card::after {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      background: #090d1e;
+      border-radius: calc(1.5rem - 1px);
+      z-index: 1;
+    }
+    .animated-border-card > * {
+      position: relative;
+      z-index: 2;
+    }
+    @keyframes rotateBorder {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
-<body class="bg-[#060813] text-slate-100 min-h-screen scanline-grid selection:bg-cyan-500 selection:text-black">
+<body class="bg-[#050711] text-slate-100 min-h-screen scanline-grid selection:bg-cyan-500 selection:text-black">
   <div id="root"></div>
+
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
+    // --- SINTETIZADOR DE SONIDO WEB AUDIO API ---
     const playSound = (type = 'click') => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -123,6 +176,7 @@
         osc.connect(gain);
         gain.connect(ctx.destination);
         const now = ctx.currentTime;
+
         if (type === 'splash') {
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(120, now);
@@ -174,6 +228,7 @@
       } catch (e) {}
     };
 
+    // --- COMPONENTE DE ICONOS LUCIDE ---
     const Icon = ({ name, className = "w-5 h-5" }) => {
       useEffect(() => {
         const timer = setTimeout(() => {
@@ -186,11 +241,15 @@
       return <i data-lucide={name} class={className}></i>;
     };
 
+    // --- HELPER DIRECCIÓN HEXADECIMAL RAM ---
     const getHexAddr = (base = 0x7FFF00, offset = 0) => {
       return '0x' + (base + offset * 8).toString(16).toUpperCase();
     };
 
-    // --- PANTALLA INTRO SPLASH ROBUSTA (LOGO DE PRIMERO -> TYPEWRITER -> FLASH NEÓN -> MODAL) ---
+    // --- PANTALLA INTRO SPLASH CIPA 11 (15s EXACTOS) ---
+    // SEGUNDO 0-3: SOLO LOGO
+    // SEGUNDO 3+: TYPEWRITER "CIPA 11"
+    // FINALIZAR TYPEWRITER: FLASH NEÓN HORIZONTAL (flashSweep)
     function SplashScreen({ onComplete, soundEnabled }) {
       const [progress, setProgress] = useState(0);
       const [statusText, setStatusText] = useState('Inicializando Núcleo CIPA 11...');
@@ -263,6 +322,7 @@
         <div class={`fixed inset-0 z-50 bg-[#04060b] flex flex-col items-center justify-center p-6 transition-all duration-700 ${isLaunching ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100 scale-100'}`}>
           <div class="max-w-xl w-full text-center space-y-6 relative z-10 page-enter">
             
+            {/* Ícono Centrado Neón (Sale inmediatamente) */}
             <div class="relative mx-auto w-24 h-24 flex items-center justify-center transition-all duration-700 transform hover:scale-110">
               <div class="w-full h-full bg-gradient-to-tr from-cyan-400 via-fuchsia-500 to-indigo-500 rounded-2xl p-[2px] shadow-[0_0_40px_rgba(0,242,254,0.4)] animate-pulse">
                 <div class="w-full h-full bg-[#070a14] rounded-[14px] flex items-center justify-center relative border border-cyan-400/30">
@@ -271,6 +331,7 @@
               </div>
             </div>
 
+            {/* Texto CIPA 11: Aparece a los 3s con Mecanografía y Flash de Resplandor */}
             <div class="h-16 flex items-center justify-center">
               {showText && (
                 <div class="relative inline-block overflow-hidden px-4 py-1">
@@ -291,6 +352,7 @@
               )}
             </div>
 
+            {/* Barra de Carga Neón de 15 Segundos */}
             <div class="w-full max-w-md mx-auto space-y-3 pt-2 font-mono">
               <div class="w-full bg-[#080d1a] h-3 rounded-full overflow-hidden p-0.5 border border-cyan-500/20 shadow-inner">
                 <div 
@@ -310,7 +372,7 @@
       );
     }
 
-    // --- MODAL DE BIENVENIDA Y REGISTRO ---
+    // --- MODAL INTERACTIVO DE REGISTRO E INICIO DE SESIÓN ---
     function UserWelcomeModal({ onConfirm, soundEnabled }) {
       const [name, setName] = useState('');
       const [role, setRole] = useState('Estudiante');
@@ -394,6 +456,7 @@
               <h2 class="text-2xl font-extrabold text-white">¡Bienvenido a <span class="neon-gradient-text">CIPA 11</span>!</h2>
               <p class="text-xs text-slate-400 font-mono">Personaliza tu perfil de sesión para ingresar al simulador</p>
             </div>
+
             <form onSubmit={handleSubmit} class="space-y-5 relative z-10 font-mono text-xs">
               <div>
                 <label class="block text-slate-300 mb-1.5 font-semibold">¿Cómo te llamas?</label>
@@ -405,6 +468,7 @@
                   class="w-full bg-[#070b18] border border-cyan-500/30 focus:border-cyan-400 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/30 shadow-inner"
                 />
               </div>
+
               <div>
                 <label class="block text-slate-300 mb-1.5 font-semibold">Rol en la sesión:</label>
                 <div class="grid grid-cols-2 gap-3">
@@ -420,6 +484,7 @@
                   ))}
                 </div>
               </div>
+
               <div>
                 <label class="block text-slate-300 mb-2 font-semibold">Selecciona tu avatar:</label>
                 <div class="grid grid-cols-2 gap-4">
@@ -447,11 +512,13 @@
                   })}
                 </div>
               </div>
+
               {errorMsg && (
                 <div class="p-2.5 bg-rose-950/70 border border-rose-500/40 rounded-xl text-rose-300 text-center text-[11px] font-sans">
                   {errorMsg}
                 </div>
               )}
+
               <button 
                 type="submit"
                 class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 hover:opacity-95 text-black font-extrabold py-3.5 rounded-xl transition-all duration-300 text-sm shadow-xl shadow-cyan-500/30 flex items-center justify-center gap-2 mt-2"
@@ -465,7 +532,7 @@
       );
     }
 
-    // --- APLICACIÓN PRINCIPAL (FLUJO COMPLETO SIN BLOQUEOS) ---
+    // --- APLICACIÓN PRINCIPAL ---
     function App() {
       const [showSplash, setShowSplash] = useState(true);
       const [userProfile, setUserProfile] = useState(null);
@@ -546,12 +613,14 @@
                       <p class="text-xs text-slate-400 font-mono">Estructuras de Datos • Universidad de Cartagena</p>
                     </div>
                   </div>
+
                   <div class="flex items-center gap-3">
                     <div class="hidden sm:flex items-center gap-2 bg-[#0a0f20] border border-fuchsia-500/30 px-3 py-1.5 rounded-xl text-xs font-mono">
                       <Icon name="user" className="w-3.5 h-3.5 text-fuchsia-400" />
                       <span class="text-white font-bold">{userProfile.name}</span>
                       <span class="px-1.5 py-0.5 bg-fuchsia-950 text-fuchsia-300 text-[9px] rounded font-bold uppercase">{userProfile.role}</span>
                     </div>
+
                     <div class="hidden md:flex items-center gap-1.5 bg-[#0a0f20] border border-cyan-500/20 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-400">
                       <Icon name="zap" className="w-3.5 h-3.5 text-amber-400" />
                       <span>Velocidad:</span>
@@ -565,6 +634,7 @@
                         </button>
                       ))}
                     </div>
+
                     <button 
                       onClick={() => { setShowSplash(true); setUserProfile(null); }}
                       class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/20 bg-[#0a0f20] hover:bg-[#121933] text-slate-300 hover:text-white text-xs font-mono font-semibold transition"
@@ -572,6 +642,7 @@
                       <Icon name="rotate-ccw" className="w-3.5 h-3.5 text-cyan-400" />
                       Replay Splash
                     </button>
+
                     <button 
                       onClick={() => setSoundEnabled(!soundEnabled)}
                       class={`p-2 rounded-xl border text-xs font-semibold transition flex items-center gap-1.5 ${soundEnabled ? 'bg-fuchsia-950/60 border-fuchsia-500/50 text-fuchsia-300 shadow-md shadow-fuchsia-500/20' : 'bg-[#0a0f20] border-slate-800 text-slate-500'}`}
@@ -579,6 +650,7 @@
                       <Icon name={soundEnabled ? "volume-2" : "volume-x"} className="w-4 h-4" />
                       <span class="hidden sm:inline">{soundEnabled ? 'Audio ON' : 'Mudo'}</span>
                     </button>
+
                     {activeStructure && (
                       <button 
                         onClick={() => { setActiveStructure(null); playSound('click'); }}
@@ -620,28 +692,30 @@
                         <div 
                           key={st.id}
                           onClick={() => { setActiveStructure(st.id); playSound('click'); }}
-                          class="group glass-panel hover:bg-[#0c1226] border border-cyan-500/20 hover:border-cyan-400/60 rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 flex flex-col justify-between relative overflow-hidden"
+                          class="animated-border-card group cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/30"
                         >
-                          <div class="absolute -right-10 -top-10 w-36 h-36 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/20 transition"></div>
-                          <div class="space-y-4 relative z-10">
-                            <div class="flex items-center justify-between">
-                              <div class={`p-3.5 bg-[#090d1a] group-hover:bg-gradient-to-tr ${st.color} text-cyan-400 group-hover:text-black rounded-2xl transition duration-300 shadow-md border border-cyan-500/20 ${st.shadow}`}>
-                                <Icon name={st.icon} className="w-7 h-7" />
+                          <div class="h-full p-6 flex flex-col justify-between relative overflow-hidden bg-[#090d1e] rounded-[calc(1.5rem-1px)]">
+                            <div class="absolute -right-10 -top-10 w-36 h-36 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/20 transition"></div>
+                            <div class="space-y-4 relative z-10">
+                              <div class="flex items-center justify-between">
+                                <div class={`p-3.5 bg-[#050814] group-hover:bg-gradient-to-tr ${st.color} text-cyan-400 group-hover:text-black rounded-2xl transition duration-300 shadow-md border border-cyan-500/20 ${st.shadow}`}>
+                                  <Icon name={st.icon} className="w-7 h-7" />
+                                </div>
+                                <div class="flex flex-col items-end">
+                                  <span class="text-[10px] px-2.5 py-0.5 bg-[#050814] text-cyan-300 rounded-full font-mono font-bold border border-cyan-500/30">
+                                    {st.badge}
+                                  </span>
+                                  <span class="text-[10px] font-mono text-fuchsia-400 mt-1 font-bold">{st.O}</span>
+                                </div>
                               </div>
-                              <div class="flex flex-col items-end">
-                                <span class="text-[10px] px-2.5 py-0.5 bg-[#090d1a] text-cyan-300 rounded-full font-mono font-bold border border-cyan-500/30">
-                                  {st.badge}
-                                </span>
-                                <span class="text-[10px] font-mono text-fuchsia-400 mt-1 font-bold">{st.O}</span>
-                              </div>
+                              <h3 class="text-xl font-bold text-white group-hover:text-cyan-300 transition">{st.title}</h3>
+                              <p class="text-xs text-slate-400 leading-relaxed">{st.desc}</p>
                             </div>
-                            <h3 class="text-xl font-bold text-white group-hover:text-cyan-300 transition">{st.title}</h3>
-                            <p class="text-xs text-slate-400 leading-relaxed">{st.desc}</p>
-                          </div>
-                          
-                          <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 group-hover:text-fuchsia-300 relative z-10">
-                            <span>Abrir Módulo</span>
-                            <Icon name="arrow-right" className="w-4 h-4 transition transform group-hover:translate-x-2" />
+                            
+                            <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-bold text-cyan-400 group-hover:text-fuchsia-300 relative z-10">
+                              <span>Abrir Módulo</span>
+                              <Icon name="arrow-right" className="w-4 h-4 transition transform group-hover:translate-x-2" />
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -665,7 +739,7 @@
       );
     }
 
-    // --- COMPONENTES AUXILIARES Y MÓDULOS DEL DASHBOARD ---
+    // --- COMPONENTES AUXILIARES Y MÓDULOS DE ESTRUCTURAS ---
     function ComplexityBadge({ access, search, insert, deleteOp, codeSnippet }) {
       const [showCode, setShowCode] = useState(false);
       return (
